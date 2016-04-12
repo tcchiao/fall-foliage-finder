@@ -17,11 +17,12 @@ import re
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
+import subprocess
 
 CWD = os.path.dirname(os.path.abspath(__file__))
-DOWNLOAD_PATH = CWD + '/../data/nvdi/hdf/'
+DOWNLOAD_PATH = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/nvdi/'
 
-class MODISScraper(object):
+class MODIS_Scraper(object):
     '''
     Usage: 
 
@@ -29,57 +30,87 @@ class MODISScraper(object):
     modis.download_latlon(product='MOLT/MOD13A2.006', latlon=[-90, -60, 35, 50])
 
     '''
-    def __init__(self):
+    def __init__(self, tiled=False, latlon=None, convert=True, mask=None):
         '''
         Initiates the MODISScraper class
         '''
         self.url = 'http://e4ftl01.cr.usgs.gov/{0}/'
         self.is_date = re.compile(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}")
         self.is_tile = re.compile(r"h[0-9]{2}v[0-9]{2}")
-        self.f_path = None
-        self.format = None
-        self.data_list = []
+        self.convert = convert
+        self.mask = mask
+        self.product = None
+        self.pages = []
+        if tiled:
+            self.tiles = self._parse_latlon(latlon)
+        else:
+            self.tiles = None
 
 
-    def download_latlon(self, product, tiled=False, latlon=None, format='.hdf', f_path=DOWNLOAD_PATH):
+    def get_dates(self, product):
         '''
         INPUT:
             product -> string, name of MODIS product desired including the version
-            #latlon -> list, bounding latitude and longitude coordinates 
-            #          in the format of [lon_min    lon_max   lat_min   lat_max]
+        '''
+        self.product = product
+        pages = self._get_links(self.url.format(self.product))
+        for p in pages:
+            if self.is_date.search(p):
+                self.pages.append(p)
+        return self.pages
+        #print 'There are {0} available dates for {1}'.format(len(self.pages), product)
+
+
+    def get_data(self, pages=None, format='hdf', f_path=DOWNLOAD_PATH):
+        ''' 
+        INPUT:
+            tiled -> boolean, True if the data is tiled 
+            latlon -> list, bounding latitude and longitude coordinates 
+                      in the format of [lon_min    lon_max   lat_min   lat_max]
             f_path -> string; path to save scraped data
         '''
-        self.f_path = f_path
+        if pages == None:
+            pages = self.pages
+        for page in pages:   
+            print 'Downloading for', page         
+            file_names = self._download(page, format, f_path)
+            if self.convert:
+                nc_files = self._convert_hdf_to_nc(file_names)
+            if self.mask is not None:
+                self._extract_area(nc_files)
 
-        if tiled:
-            tiles = set(self._parse_latlon(latlon))
 
-        product_page = self.url.format(product)
-        self.format = format
-        print 'Downloading product:', product
+    def _download(self, page, format, f_path):
+        links = self._get_links(self.url.format(self.product)+page)
+        file_names = []
+        for l in links:
+            if l[-len(format):] == format:
+                url = self.url.format(self.product) + page + l
+                path = f_path + page.replace('/', '.') + format
+                self._save_to_file(url, path)
+                file_names.append(path)
+        return file_names
 
-        links = self._get_links(product_page)
-        for link in links:
-            if self.is_date.search(link):
-                if tiled:
-                    folder = f_path+link
-                    if not os.path.exists(folder):
-                        os.mkdir(folder)
+    def _convert_hdf_to_nc(self, file_names):
+        
+        nc_files = []
+        for file_name in file_names:
+            
+            #subprocess.call(['/opt/local/bin/gdal_translate', '-of', 'netCDF', \
+            #        '"HDF4_EOS:EOS_GRID:"{0}":MODIS_Grid_16Day_VI_CMG:CMG 0.05 Deg 16 days NDVI"'.format(file_name), \
+            #        file_name.replace('hdf', 'nc')])
 
-                print 'Downloading date', link
-                files = self._get_links(product_page+link)
-                for f in files:
-                    if tiled:
-                        tile = self.is_tile.search(f).group()
-                        if format in f and tile in tiles:
-                            url = product_page+link+f
-                            path = folder+f
-                            self._save_to_file(url, path)
-                    else:
-                        if format in f:
-                            url = product_page+link+f
-                            path = f_path+link.replace('/', '.')+f.split('.')[-1]
-                            self._save_to_file(url, path)
+            os.system('/opt/local/bin/gdal_translate -of netCDF "HDF4_EOS:EOS_GRID:{0}:MODIS_Grid_16Day_VI_CMG:CMG 0.05 Deg 16 days NDVI" {1}'.format(file_name, file_name.replace('hdf', 'nc')))
+        
+            nc_files.append(file_name.replace('hdf', 'nc'))
+            subprocess.call(['rm', file_name])
+        return nc_files
+
+
+    def _extract_area(self, nc_files):
+        for nc_file in nc_files:
+            subprocess.call(['cdo', 'remapdis,{0}'.format(self.mask), nc_file, nc_file.replace('.nc', '.mask.nc')])
+            subprocess.call(['rm', nc_file])
 
 
     def _get_links(self, url):
