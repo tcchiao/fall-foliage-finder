@@ -46,7 +46,6 @@ class MODIS_Scraper(object):
         else:
             self.tiles = None
 
-
     def get_dates(self, product):
         '''
         INPUT:
@@ -59,7 +58,6 @@ class MODIS_Scraper(object):
                 self.pages.append(p)
         return self.pages
         #print 'There are {0} available dates for {1}'.format(len(self.pages), product)
-
 
     def get_data(self, pages=None, format='hdf', f_path=DOWNLOAD_PATH):
         ''' 
@@ -78,7 +76,6 @@ class MODIS_Scraper(object):
                 nc_files = self._convert_hdf_to_nc(file_names)
             if self.mask is not None:
                 self._extract_area(nc_files)
-
 
     def _download(self, page, format, f_path):
         links = self._get_links(self.url.format(self.product)+page)
@@ -106,12 +103,10 @@ class MODIS_Scraper(object):
             subprocess.call(['rm', file_name])
         return nc_files
 
-
     def _extract_area(self, nc_files):
         for nc_file in nc_files:
             subprocess.call(['cdo', 'remapdis,{0}'.format(self.mask), nc_file, nc_file.replace('.nc', '.mask.nc')])
             subprocess.call(['rm', nc_file])
-
 
     def _get_links(self, url):
         r = requests.get(url)
@@ -120,12 +115,10 @@ class MODIS_Scraper(object):
 
         return [link['href'] for link in links]
 
-
     def _save_to_file(self, url, path):
         r = requests.get(url)
         with open(path, 'w') as f:
             f.write(r.content)
-
 
     def _parse_latlon(self, latlon, grid_src='http://modis-land.gsfc.nasa.gov/pdf/sn_bound_10deg.txt'):
         '''
@@ -139,17 +132,17 @@ class MODIS_Scraper(object):
             list; strings of MODLAND tile number formatted as 'h##v##'
         '''
         lon_min, lon_max, lat_min, lat_max = latlon
-        
+
         r = requests.get(grid_src)
         table = [x.split() for x in r.content.split('\r') if len(x.split()) == 6]
         table = pd.DataFrame(table[1:], columns=table[0], dtype=float)
-        
-        conditions = np.vstack((table.lon_max >= lon_min, table.lon_min <= lon_max, 
-                                table.lat_max >= lat_min, table.lat_min <= lat_max))
-        
-        table['in_bounds'] = conditions.all(axis=0)    
-        v_list = table[table.in_bounds].iv.values
-        h_list = table[table.in_bounds].ih.values 
-        
-        return ('h{0:02d}v{1:02d}'.format(int(h), int(v)) for (v, h) in zip(v_list, h_list))
 
+        conditions = np.vstack((table.lon_max >= lon_min, table.lon_min <= lon_max,
+                                table.lat_max >= lat_min, table.lat_min <= lat_max))
+
+        table['in_bounds'] = conditions.all(axis=0)
+        v_list = table[table.in_bounds].iv.values
+        h_list = table[table.in_bounds].ih.values
+
+        return ('h{0:02d}v{1:02d}'.format(int(h), int(v))
+                for (v, h) in zip(v_list, h_list))
