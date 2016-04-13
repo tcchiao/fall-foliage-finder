@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 
-CWD = os.path.dirname(os.path.abspath(__file__))
+#CWD = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_PATH = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/nvdi/'
 
 class MODIS_Scraper(object):
