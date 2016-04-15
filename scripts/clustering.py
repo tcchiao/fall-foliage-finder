@@ -73,28 +73,8 @@ class Location_Clusterer(KMeans):
         for i in xrange(self.raw_data.shape[0]):
             temp = self.raw_data[i].flatten().data
             self.data2d[:, i] = temp[flatten_mask]
-        
             
-#     def fit(self):
-#         """Compute k-means clustering from the 2D data stored in the object.
-            
-#         """
-#         random_state = check_random_state(self.random_state)
-#         X = self.data2d
-#         X = self._check_fit_data(X)
-
-#         self.cluster_centers_, self.labels_, self.inertia_, self.n_iter_ = \
-#             k_means(
-#                 X, n_clusters=self.n_clusters, init=self.init,
-#                 n_init=self.n_init, max_iter=self.max_iter,
-#                 verbose=self.verbose, return_n_iter=True,
-#                 precompute_distances=self.precompute_distances,
-#                 tol=self.tol, random_state=random_state, copy_x=self.copy_x,
-#                 n_jobs=self.n_jobs)
-#         return self
-            
-
+        scaler = StandardScaler()
+        self.data2d = scaler.fit_transform(self.data2d)
         
-        
-            
-        
+ 

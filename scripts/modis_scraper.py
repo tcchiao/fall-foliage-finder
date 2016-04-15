@@ -19,8 +19,6 @@ import pandas as pd
 import numpy as np
 import subprocess
 
-#CWD = os.path.dirname(os.path.abspath(__file__))
-DOWNLOAD_PATH = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/nvdi/'
 
 class MODIS_Scraper(object):
     '''
@@ -59,7 +57,7 @@ class MODIS_Scraper(object):
         return self.pages
         #print 'There are {0} available dates for {1}'.format(len(self.pages), product)
 
-    def get_data(self, pages=None, format='hdf', f_path=DOWNLOAD_PATH):
+    def get_data(self, f_path, pages=None, format='hdf'):
         ''' 
         INPUT:
             tiled -> boolean, True if the data is tiled 
@@ -92,11 +90,6 @@ class MODIS_Scraper(object):
         
         nc_files = []
         for file_name in file_names:
-            
-            #subprocess.call(['/opt/local/bin/gdal_translate', '-of', 'netCDF', \
-            #        '"HDF4_EOS:EOS_GRID:"{0}":MODIS_Grid_16Day_VI_CMG:CMG 0.05 Deg 16 days NDVI"'.format(file_name), \
-            #        file_name.replace('hdf', 'nc')])
-
             os.system('/opt/local/bin/gdal_translate -of netCDF "HDF4_EOS:EOS_GRID:{0}:MODIS_Grid_16Day_VI_CMG:CMG 0.05 Deg 16 days NDVI" {1}'.format(file_name, file_name.replace('hdf', 'nc')))
         
             nc_files.append(file_name.replace('hdf', 'nc'))
