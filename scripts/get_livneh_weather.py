@@ -5,9 +5,9 @@ base_url = 'ftp://ftp.hydro.washington.edu/pub/blivneh/CONUS/Meteorology.nc.v.1.
 base_fname = 'Meteorology_Livneh_CONUSExt_v.1.2_2013.{t}.nc.bz2'
 
 f_path = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/weather/'
-mask = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/mask.nc'
+mask = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/final/mask.nc'
 
-yrs = np.arange(2002, 2012)
+yrs = np.arange(2004, 2012)
 months = np.arange(1, 13)
 variables = ['Prec', 'Tmax', 'Tmin', 'Wind']
 
@@ -45,3 +45,10 @@ for yr in yrs:
                         fname.format(mod='.short', ext='.nc')])
         for var in variables:
             subprocess.call(['rm', fname.format(mod='.short.'+str(var), ext='.nc')])
+
+    print 'Merging year', yr
+    for var in variables:
+        file_list = [f_path+'{yr}{month:02d}.{var}.nc'.format(yr=yr, month=month, var=var) for month in months]
+        subprocess.call(['cdo', 'mergetime', ' '.join(file_list), f_path+'{yr}.{var}.nc'.format(yr=yr, var=var)])
+        for f in file_list:
+            subprocess.call(['rm', f])
