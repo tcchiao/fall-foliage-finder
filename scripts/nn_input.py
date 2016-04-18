@@ -144,7 +144,7 @@ class NN_Input(object):
                 labels.append(self.labels[i, j, k])
                 output_maps.append(features[0])
                 output_lst.append(features[1])
-        return indices, labels, output_maps, output_lst
+        return np.array(indices), np.array(labels), np.array(output_maps), np.array(output_lst)
 
     def _check_mask(self, i, j, k):
         pass
