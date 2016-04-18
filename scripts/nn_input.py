@@ -19,6 +19,7 @@ class NN_Input(object):
 
     To-Do:
     - add function to take the clustering data in some ways
+    - change the output of "select" to fit the graph model of keras
     - add function to return the actual lat, lon, and time based on indices
     
     """
@@ -101,40 +102,49 @@ class NN_Input(object):
         lon: int, index for the longitude desired. Must be within the range available in self.data. 
         time: int, index for the time point desired. Must be within the range available in self.data. 
         """
-        output = []
+        maps = None
+        lst = None
         for ix, feat in enumerate(self.variables):
             if self.feature_types[feat] == 'history_time_series':
-                output.append(self.features[feat][i:i+self.history, j-5:j+5, k-5:k+5])
-                if np.any(output[ix].mask):
-                    return None
+                temp_data = self.features[feat][i:i+self.history+1, j-self.box:j+self.box+1, k-self.box:k+self.box+1]
             elif self.feature_types[feat] == 'forecast_time_series':
-                output.append(self.features[feat][i:i+self.predict, j-5:j+5, k-5:k+5])
-                if np.any(output[ix].mask):
-                    return None
+                temp_data = self.features[feat][i:i+self.predict+1, j-self.box:j+self.box+1, k-self.box:k+self.box+1]
             elif self.feature_types[feat] == 'multi_layers':
-                output.append(self.features[feat][:, j, k].flatten())
-                if np.any(output[ix].mask):
-                    return None
+                temp_data = self.features[feat][:, j, k].flatten()
             else: 
-                output.append(self.features[feat][j, k])
+                temp_data = self.features[feat][j, k]
             
-        return output
+            if len(temp_data.shape) == 3:                
+                if np.any(temp_data.mask):
+                    return None
+                elif maps is None:
+                    maps = temp_data
+                else:
+                    maps = np.ma.concatenate((maps, temp_data), axis=0)
+            else:
+                if lst is None:
+                    lst = temp_data
+                else:
+                    lst = np.append(lst, temp_data)
+        return [maps, lst]
         
     def select(self, n, cutoff=None):
         if cutoff is None:
             cutoff = len(self.times)/2
             
-        output = []
-        while len(output) < n:
+        indices, labels, output_maps, output_lst = [], [], [], []
+        
+        while len(labels) < n:
             i = np.random.randint(cutoff)
             j = np.random.randint(self.box, len(self.lats)-self.box)
             k = np.random.randint(self.box, len(self.lons)-self.box)
             features = self.get_features(i, j, k)
             if features is not None:
-                indices = (i, j, k)
-                label = self.labels[i, j, k]
-                output.append([indices, label, features])
-        return output
+                indices.append([i, j, k])
+                labels.append(self.labels[i, j, k])
+                output_maps.append(features[0])
+                output_lst.append(features[1])
+        return indices, labels, output_maps, output_lst
 
     def _check_mask(self, i, j, k):
         pass
