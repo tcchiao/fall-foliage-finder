@@ -102,22 +102,23 @@ class NN_Input(object):
         time: int, index for the time point desired. Must be within the range available in self.data. 
         """
         output = []
-        masks = []
-        for feat in self.variables:
+        for ix, feat in enumerate(self.variables):
             if self.feature_types[feat] == 'history_time_series':
                 output.append(self.features[feat][i:i+self.history, j-5:j+5, k-5:k+5])
-                masks.append(self.features[feat].mask[i:i+self.history, j-5:j+5, k-5:k+5])
+                if np.any(output[ix].mask):
+                    return None
             elif self.feature_types[feat] == 'forecast_time_series':
                 output.append(self.features[feat][i:i+self.predict, j-5:j+5, k-5:k+5])
-                masks.append(self.features[feat].mask[i:i+self.predict, j-5:j+5, k-5:k+5])
+                if np.any(output[ix].mask):
+                    return None
             elif self.feature_types[feat] == 'multi_layers':
                 output.append(self.features[feat][:, j, k].flatten())
-                masks.append(self.features[feat].mask[:, j, k].flatten())
+                if np.any(output[ix].mask):
+                    return None
             else: 
                 output.append(self.features[feat][j, k])
-                masks.append(self.features[feat].mask[j, k])
-                
-        return output, masks
+            
+        return output
         
     def select(self, n, cutoff=None):
         if cutoff is None:
@@ -128,8 +129,8 @@ class NN_Input(object):
             i = np.random.randint(cutoff)
             j = np.random.randint(self.box, len(self.lats)-self.box)
             k = np.random.randint(self.box, len(self.lons)-self.box)
-            features, masks = self.get_features(i, j, k)
-            if not np.any(masks):
+            features = self.get_features(i, j, k)
+            if features is not None:
                 indices = (i, j, k)
                 label = self.labels[i, j, k]
                 output.append([indices, label, features])
