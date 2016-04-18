@@ -22,7 +22,7 @@ class NN_Input(object):
     - add function to return the actual lat, lon, and time based on indices
     
     """
-    def __init__(self, predict=2, history=3):
+    def __init__(self, predict=2, history=2, box=5):
         """
         Initialize a class for storing neural network input data. 
         
@@ -39,11 +39,13 @@ class NN_Input(object):
         self.times = None
         
         self.labels = None
-        self.features = OrderedDict()
-        self.feature_types = OrderedDict()
+        self.features = {}
+        self.feature_types = {}
+        self.variables = []
         
         self.predict = predict
         self.history = history
+        self.box = box
         
     def load_labels(self, f_path, var):
         """
@@ -58,8 +60,8 @@ class NN_Input(object):
         self.lons = nc.variables['lon'][:]
         self.lats = nc.variables['lat'][:]
         
-        self.times = nc.variables['time'][self.history-1:-self.predict]
-        n = self.predict + self.history - 1
+        self.times = nc.variables['time'][self.history:-self.predict]
+        n = self.predict + self.history
         self.labels = nc.variables[var][n:,:,:]
         
     def load_features(self, f_path, var, name, feature_type):
@@ -79,11 +81,12 @@ class NN_Input(object):
         
         # Storing information on whether the input features 
         self.feature_types[name] = feature_type
+        self.variables.append(name)
         
         if self.feature_types[name] == 'history_time_series':
             self.features[name] = temp_data[:-self.predict, :, :]
         elif self.feature_types[name] == 'forecast_time_series':
-            self.features[name] = temp_data[self.history-1:, :, :]
+            self.features[name] = temp_data[self.history:, :, :]
         else:
             self.features[name] = temp_data
         
@@ -99,15 +102,22 @@ class NN_Input(object):
         time: int, index for the time point desired. Must be within the range available in self.data. 
         """
         output = []
+        masks = []
         for feat in self.variables:
             if self.feature_types[feat] == 'history_time_series':
-                pass
+                output.append(self.features[feat][i:i+self.history, j-5:j+5, k-5:k+5])
+                masks.append(self.features[feat].mask[i:i+self.history, j-5:j+5, k-5:k+5])
             elif self.feature_types[feat] == 'forecast_time_series':
-                pass
+                output.append(self.features[feat][i:i+self.predict, j-5:j+5, k-5:k+5])
+                masks.append(self.features[feat].mask[i:i+self.predict, j-5:j+5, k-5:k+5])
             elif self.feature_types[feat] == 'multi_layers':
-                pass
+                output.append(self.features[feat][:, j, k].flatten())
+                masks.append(self.features[feat].mask[:, j, k].flatten())
             else: 
-                pass
+                output.append(self.features[feat][j, k])
+                masks.append(self.features[feat].mask[j, k])
+                
+        return output, masks
         
     def select(self, n, cutoff=None):
         if cutoff is None:
@@ -116,14 +126,14 @@ class NN_Input(object):
         output = []
         while len(output) < n:
             i = np.random.randint(cutoff)
-            j = np.random.randint(self.lats)
-            k = np.random.randint(self.lons)
+            j = np.random.randint(self.box, len(self.lats)-self.box)
+            k = np.random.randint(self.box, len(self.lons)-self.box)
             features, masks = self.get_features(i, j, k)
             if not np.any(masks):
                 indices = (i, j, k)
                 label = self.labels[i, j, k]
                 output.append([indices, label, features])
         return output
-    
-    def variables(self):
-        return self.features.keys()
+
+    def _check_mask(self, i, j, k):
+        pass
