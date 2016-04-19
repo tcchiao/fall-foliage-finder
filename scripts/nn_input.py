@@ -114,9 +114,12 @@ class NN_Input(object):
                 temp_data = self.features[feat][j, k]
             
             if len(temp_data.shape) == 3:                
-                if np.any(temp_data.mask):
+                if np.sum(temp_data.mask) > len(temp_data.flatten())/2:
                     return None
-                elif maps is None:
+                elif np.any(temp_data.mask):
+                    temp_data = temp_data.filled(-999)
+                    
+                if maps is None:
                     maps = temp_data
                 else:
                     maps = np.ma.concatenate((maps, temp_data), axis=0)
@@ -127,7 +130,7 @@ class NN_Input(object):
                     lst = np.append(lst, temp_data)
         return [maps, lst]
         
-    def select(self, n, cutoff=None):
+    def select(self, n=None, cutoff=None, subset=None):
         """
         Selecting n data points randomly from the database before specified time cutoff. 
         
@@ -138,18 +141,39 @@ class NN_Input(object):
         """
         if cutoff is None:
             cutoff = len(self.times)/2
-            
-        indices, labels, output_maps, output_lst = [], [], [], []
         
-        while len(labels) < n:
-            i = np.random.randint(cutoff)
-            j = np.random.randint(self.box, len(self.lats)-self.box)
-            k = np.random.randint(self.box, len(self.lons)-self.box)
-            features = self.get_features(i, j, k)
-            l = self.labels[i, j, k]
-            if features is not None and l != np.nan:
-                indices.append([i, j, k])
-                labels.append(l)
-                output_maps.append(features[0])
-                output_lst.append(features[1])
-        return np.array(indices), np.array(labels), np.array(output_maps), np.array(output_lst)
+        indices, labels, output_maps, output_lst = [], [], [], []
+
+        if n is None:
+            for (lon, lat) in subset:
+                j = np.where(self.lats==lat)[0]
+                k = np.where(self.lons==lon)[0]
+                for i in xrange(cutoff):
+                    l = self.labels[i, j, k]
+                    features = self.get_features(i, j, k)
+                    if features is not None and l != np.nan and features[0].shape==output_maps[-1].shape:
+                        indices.append([i, j, k])
+                        labels.append(l)
+                        output_maps.append(features[0])
+                        output_lst.append(features[1])
+        
+        else:
+            while len(labels) < n:
+                if subset is not None: 
+                    ind = np.random.choice(len(subset))
+                    j = np.where(self.lats==subset[ind, 1])[0]
+                    k = np.where(self.lons==subset[ind, 0])[0]
+                else:
+                    j = np.random.randint(self.box, len(self.lats)-self.box)
+                    k = np.random.randint(self.box, len(self.lons)-self.box)
+
+                i = np.random.randint(cutoff)
+                l = self.labels[i, j, k]
+                features = self.get_features(i, j, k)
+                if features is not None and l != np.nan:
+                    indices.append([i, j, k])
+                    labels.append(l)
+                    output_maps.append(features[0])
+                    output_lst.append(features[1])
+                    
+        return indices, labels, output_maps, output_lst
