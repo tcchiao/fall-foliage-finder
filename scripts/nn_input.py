@@ -102,16 +102,16 @@ class NN_Input(object):
         time: int, index for the time point desired. Must be within the range available in self.data. 
         """
         maps = None
-        lst = None
+#         lst = None
         for ix, feat in enumerate(self.variables):
             if self.feature_types[feat] == 'history_time_series':
                 temp_data = self.features[feat][i:i+self.history+1, j-self.box:j+self.box+1, k-self.box:k+self.box+1]
             elif self.feature_types[feat] == 'forecast_time_series':
                 temp_data = self.features[feat][i:i+self.predict+1, j-self.box:j+self.box+1, k-self.box:k+self.box+1]
-            elif self.feature_types[feat] == 'multi_layers':
-                temp_data = self.features[feat][:, j, k].flatten()
-            else: 
-                temp_data = self.features[feat][j, k]
+#             elif self.feature_types[feat] == 'multi_layers':
+#                 temp_data = self.features[feat][:, j, k].flatten()
+#             else: 
+#                 temp_data = self.features[feat][j, k]
             
             if len(temp_data.shape) == 3:                
                 if np.sum(temp_data.mask) > len(temp_data.flatten())/2:
@@ -123,14 +123,15 @@ class NN_Input(object):
                     maps = temp_data
                 else:
                     maps = np.ma.concatenate((maps, temp_data), axis=0)
-            else:
-                if lst is None:
-                    lst = temp_data
-                else:
-                    lst = np.append(lst, temp_data)
-        return [maps, lst]
+#             else:
+#                 if lst is None:
+#                     lst = temp_data
+#                 else:
+#                     lst = np.append(lst, temp_data)
+#         return [maps, lst]
+        return maps
         
-    def select(self, n=None, cutoff=None, subset=None):
+    def select(self, n=None, t=None, cutoff=None, subset=None):
         """
         Selecting n data points randomly from the database before specified time cutoff. 
         
@@ -158,11 +159,21 @@ class NN_Input(object):
                 for i in xrange(cutoff):
                     l = self.labels[i, j, k]
                     features = self.get_features(i, j, k)
-                    if features is not None and l != np.nan and features[0].shape==map_dimensions:
+                    if features is not None and l != np.nan and features.shape==map_dimensions:
                         indices.append([i, j, k])
                         labels.append(l)
-                        output_maps.append(features[0])
-                        output_lst.append(features[1])
+                        output_maps.append(features)
+#                         output_lst.append(features[1])
+        
+        elif t is not None:
+            for (k, j) in subset:
+                l = self.labels[t, j, k]
+                features = self.get_features(t, j, k)
+                if features is not None and l != np.nan and features.shape==map_dimensions:
+                    indices.append([t, j, k])
+                    labels.append(l)
+                    output_maps.append(features)
+#                     output_lst.append(features[1])
         
         else:
             while len(labels) < n:
@@ -174,10 +185,10 @@ class NN_Input(object):
                 i = np.random.randint(cutoff)
                 l = self.labels[i, j, k]
                 features = self.get_features(i, j, k)
-                if features is not None and l != np.nan and features[0].shape==map_dimensions:
+                if features is not None and l != np.nan and features.shape==map_dimensions:
                     indices.append([i, j, k])
                     labels.append(l)
-                    output_maps.append(features[0])
-                    output_lst.append(features[1])
+                    output_maps.append(features)
+#                     output_lst.append(features[1])
                     
-        return indices, labels, output_maps, output_lst
+        return np.array(indices), np.array(labels), np.array(output_maps)
