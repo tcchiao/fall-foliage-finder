@@ -1,14 +1,17 @@
-import matplotlib.pyplot as plt
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from netCDF4 import Dataset
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 class Location_Clusterer(KMeans):
     def __init__(self, n_clusters=8):
         KMeans.__init__(self, n_clusters=n_clusters)
         self.source_files = []
+        self.ind = None
+        self.ind2d = None
         self.coords = None
         self.coords2d = None
         self.mask = None
@@ -32,7 +35,10 @@ class Location_Clusterer(KMeans):
             
             lats = nc.variables['lat'][:]
             lons = nc.variables['lon'][:]
-            self.coords = np.meshgrid(lons, lats)          
+            self.coords = np.meshgrid(lons, lats)
+            y = len(lats)
+            x = len(lons)
+            self.ind = np.meshgrid(np.arange(x), np.arange(y))
         
         # Reading the actual data
         nc = Dataset(file_name, 'r')
@@ -64,10 +70,12 @@ class Location_Clusterer(KMeans):
     def transform_data(self):
         inmask = self.mask.flatten().shape[0] - sum(self.mask.flatten())
         flatten_mask = (1-self.mask.flatten()).astype(bool)
-        
+    
+        self.ind2d = np.zeros((inmask, len(self.coords)))
         self.coords2d = np.zeros((inmask, len(self.coords)))
         for i in xrange(len(self.coords)):
             self.coords2d[:, i] = self.coords[i].flatten()[flatten_mask]
+            self.ind2d[:, i] = self.ind[i].flatten()[flatten_mask]
         
         self.data2d = np.zeros((inmask, self.raw_data.shape[0]))
         for i in xrange(self.raw_data.shape[0]):

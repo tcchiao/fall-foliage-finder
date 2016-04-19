@@ -143,15 +143,22 @@ class NN_Input(object):
             cutoff = len(self.times)/2
         
         indices, labels, output_maps, output_lst = [], [], [], []
+        
+        mi = 0
+        for ix, feat in enumerate(self.variables):
+            if self.feature_types[feat] == 'history_time_series':
+                mi += (self.history+1)
+            elif self.feature_types[feat] == 'forecast_time_series':
+                mi += (self.predict+1)
+                
+        map_dimensions = (mi, (2*self.box)+1, (2*self.box)+1)
 
         if n is None:
-            for (lon, lat) in subset:
-                j = np.where(self.lats==lat)[0]
-                k = np.where(self.lons==lon)[0]
+            for (k, j) in subset:
                 for i in xrange(cutoff):
                     l = self.labels[i, j, k]
                     features = self.get_features(i, j, k)
-                    if features is not None and l != np.nan and features[0].shape==output_maps[-1].shape:
+                    if features is not None and l != np.nan and features[0].shape==map_dimensions:
                         indices.append([i, j, k])
                         labels.append(l)
                         output_maps.append(features[0])
@@ -159,18 +166,15 @@ class NN_Input(object):
         
         else:
             while len(labels) < n:
-                if subset is not None: 
-                    ind = np.random.choice(len(subset))
-                    j = np.where(self.lats==subset[ind, 1])[0]
-                    k = np.where(self.lons==subset[ind, 0])[0]
+                if subset is not None:
+                    (k, j) = subset[np.random.choice(len(subset))]
                 else:
                     j = np.random.randint(self.box, len(self.lats)-self.box)
                     k = np.random.randint(self.box, len(self.lons)-self.box)
-
                 i = np.random.randint(cutoff)
                 l = self.labels[i, j, k]
                 features = self.get_features(i, j, k)
-                if features is not None and l != np.nan:
+                if features is not None and l != np.nan and features[0].shape==map_dimensions:
                     indices.append([i, j, k])
                     labels.append(l)
                     output_maps.append(features[0])
