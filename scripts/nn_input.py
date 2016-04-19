@@ -15,11 +15,10 @@ from clustering import Location_Clusterer
 
 class NN_Input(object):
     """
-    Stores the input data ready for feeding into a keras neural network. 
+    Stores the input data ready for feeding into a Keras neural network. 
 
     To-Do:
     - add function to take the clustering data in some ways
-    - change the output of "select" to fit the graph model of keras
     - add function to return the actual lat, lon, and time based on indices
     
     """
@@ -129,6 +128,14 @@ class NN_Input(object):
         return [maps, lst]
         
     def select(self, n, cutoff=None):
+        """
+        Selecting n data points randomly from the database before specified time cutoff. 
+        
+        Parameters
+        ----------
+        n: int, number of data points wanted. 
+        cutoff: int, time cutoff for the training dataset. Default is half of the data available. 
+        """
         if cutoff is None:
             cutoff = len(self.times)/2
             
@@ -139,12 +146,10 @@ class NN_Input(object):
             j = np.random.randint(self.box, len(self.lats)-self.box)
             k = np.random.randint(self.box, len(self.lons)-self.box)
             features = self.get_features(i, j, k)
-            if features is not None:
+            l = self.labels[i, j, k]
+            if features is not None and l != np.nan:
                 indices.append([i, j, k])
-                labels.append(self.labels[i, j, k])
+                labels.append(l)
                 output_maps.append(features[0])
                 output_lst.append(features[1])
         return np.array(indices), np.array(labels), np.array(output_maps), np.array(output_lst)
-
-    def _check_mask(self, i, j, k):
-        pass

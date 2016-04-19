@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from netCDF4 import Dataset
@@ -77,4 +77,9 @@ class Location_Clusterer(KMeans):
         scaler = StandardScaler()
         self.data2d = scaler.fit_transform(self.data2d)
         
- 
+def plot_list_in_2D(x, y, val):
+    plt.figure(figsize=(17,10))
+    plt.scatter(x, y, c=val, edgecolors='none', s=3)
+    plt.xlim(x.min(), x.max())
+    plt.ylim(y.min(), y.max())
+    plt.show() 
