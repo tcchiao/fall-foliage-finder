@@ -22,7 +22,7 @@ class NN_Input(object):
     - add function to return the actual lat, lon, and time based on indices
     
     """
-    def __init__(self, predict=2, history=2, box=5):
+    def __init__(self, predict=2, history=2, box=5, random_seed=None):
         """
         Initialize a class for storing neural network input data. 
         
@@ -34,6 +34,8 @@ class NN_Input(object):
                  For example, if data_length=3, the model will receive 3 time points worth of data (current time
                  point, the previous time point, and the timep point before that).
         """
+        if random_seed is not None:
+            np.random.seed(random_seed)
         self.lons = None
         self.lats = None
         self.times = None
