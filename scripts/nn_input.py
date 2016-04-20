@@ -90,6 +90,8 @@ class NN_Input(object):
         else:
             self.features[name] = temp_data
         
+    def get_batch(self, j, k):
+        pass
     
     def get_features(self, i, j, k):
         """
@@ -154,9 +156,9 @@ class NN_Input(object):
                 
         map_dimensions = (mi, (2*self.box)+1, (2*self.box)+1)
 
-        if n is None:
-            for (k, j) in subset:
-                for i in xrange(cutoff):
+        if n is None and t is None:
+            for i in xrange(cutoff):
+                for (k, j) in subset:
                     l = self.labels[i, j, k]
                     features = self.get_features(i, j, k)
                     if features is not None and l != np.nan and features.shape==map_dimensions:
