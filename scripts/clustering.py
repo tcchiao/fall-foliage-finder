@@ -85,8 +85,3 @@ class Location_Clusterer(KMeans):
         scaler = StandardScaler()
         self.data2d = scaler.fit_transform(self.data2d)
         
-def plot_list_in_2D(x, y, val):
-    plt.scatter(x, y, c=val, edgecolors='none', s=3)
-    plt.xlim(x.min(), x.max())
-    plt.ylim(y.min(), y.max())
-    plt.show() 
