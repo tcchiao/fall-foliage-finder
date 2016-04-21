@@ -4,11 +4,42 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap, cm
+import matplotlib.animation as animation
+import matplotlib.image as mpimg
+from sklearn.metrics import accuracy_score, roc_auc_score
 
 def reformat_y(y):
     y[y == -1] = 0
     y = np.hstack((y.reshape(-1,1), 1-y.reshape(-1,1)))
     return y
+
+def scale_data(data, mean, std):
+    return (data-mean)/std
+
+def evaluate_model(y_train, train_predict, y_test, test_predict, threshold=0.5):
+    bm = np.sum(y_train[:,1])/float(len(y_train))
+    acc = accuracy_score(y_train[:,0], (train_predict[:,0]>threshold))
+    try:
+        auc = roc_auc_score(y_train[:,0], train_predict[:,0])
+    except ValueError:
+        auc = 'N/A'
+        
+    print 'Training set:'
+    print 'Bench mark:', bm
+    print 'Accuracy:', acc
+    print 'ROC AUC:', auc
+    
+    bm = np.sum(y_test[:,1])/float(len(y_test))
+    acc = accuracy_score(y_test[:,0], (test_predict[:,0]>threshold))
+    try:
+        auc = roc_auc_score(y_test[:,0], test_predict[:,0])
+    except ValueError:
+        auc = 'N/A'
+        
+    print 'Testing set:'
+    print 'Bench mark:', bm
+    print 'Accuracy:', acc
+    print 'ROC AUC:', auc
 
 def plot_time_series(i, j, time_series):
     fig = plt.figure(figsize=(20,6))
@@ -25,6 +56,15 @@ def plot_list_in_2D(x, y, val):
     plt.show() 
 
 def plot_compare_map(lons, lats, y_true, y_predict, timestamp, cmap=None, folder='/home/ubuntu/dataset/output/'):
+
+#     rows, row_pos = np.unique(lats, return_inverse=True)
+#     cols, col_pos = np.unique(lons, return_inverse=True)
+
+#     y_true_array = np.zeros((len(rows), len(cols)))
+#     y_true_array[row_pos, col_pos] = y_true
+#     y_predict_array = np.zeros((len(rows), len(cols)))
+#     y_predict_array[row_pos, col_pos] = y_true    
+     
     timestamp = str(int(timestamp))
     yr = timestamp[:4]
     mn = timestamp[4:6]
@@ -33,7 +73,6 @@ def plot_compare_map(lons, lats, y_true, y_predict, timestamp, cmap=None, folder
     if cmap is None:
         cmap=mpl.cm.get_cmap('RdYlGn')
         
-    norm = mpl.colors.Normalize(y_true.min, y_true.max)
     area_thresh=25000
     land_color='grey'
     ocean_color='lightblue'
@@ -46,6 +85,9 @@ def plot_compare_map(lons, lats, y_true, y_predict, timestamp, cmap=None, folder
             urcrnrlat=lats.max(), urcrnrlon=lons.max(), resolution='f',
             area_thresh=area_thresh)
     m.scatter(lons, lats, c=y_true, edgecolor='none', cmap=cmap)
+#     xi, yi = m(lons, lats)
+#     xi, yi = np.meshgrid(xi, yi)
+#     m.pcolormesh(xi, yi, y_true, cmap=cmap, norm=norm)
     m.drawlsmask(land_color=land_color, ocean_color=ocean_color, lakes=True)
     m.drawcountries()
     m.drawcoastlines()
@@ -61,3 +103,16 @@ def plot_compare_map(lons, lats, y_true, y_predict, timestamp, cmap=None, folder
     img_path = folder+str(int(timestamp))+'.png'
     plt.savefig(img_path)
     return img_path
+
+def animate_maps(img_paths, ani_path):
+    ims = []
+    fig = plt.figure()
+    plt.axis('off')
+
+    for p in img_paths:
+        img=mpimg.imread(p)    
+        ims.append((plt.imshow(img),))
+
+    im_ani = animation.ArtistAnimation(fig, ims, interval=500, repeat_delay=3000, blit=False)
+    mywriter = animation.FFMpegWriter(fps=10)
+    im_ani.save(ani_path, writer=mywriter)

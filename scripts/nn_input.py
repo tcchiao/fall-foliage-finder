@@ -186,7 +186,10 @@ class NN_Input(object):
                 else:
                     j = np.random.randint(self.box, len(self.lats)-self.box)
                     k = np.random.randint(self.box, len(self.lons)-self.box)
-                i = np.random.randint(cutoff)
+                if cutoff < 0:
+                    i = np.random.randint(cutoff, 0)
+                else:
+                    i = np.random.randint(cutoff)
                 l = self.labels[i, j, k]
                 features = self.get_features(i, j, k)
                 if features is not None and l != np.nan and features.shape==map_dimensions:
