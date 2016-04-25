@@ -31,6 +31,18 @@ class MODIS_Scraper(object):
     def __init__(self, tiled=False, latlon=None, convert=True, mask=None):
         '''
         Initiates the MODISScraper class
+
+        Parameters
+        ----------
+        tiled: boolean, indicates if the satellite image/data to be downloaded is tiled.
+               If True, then latlon must be set. The MODLAND tile numbers will be parsed
+               from the latlon box input. 
+        latlon: list, bounding latitude and longitude coordinates in the format of 
+                [lon_min    lon_max   lat_min   lat_max]
+        convert: boolean, indicates if the scraped data should be converted to netCDF formats.
+                Only works on hdf format for now. 
+        mask: str, file path to a netCDF file as the grid file. If not None, the converted
+              netCDF file will be remapped to the mask file. 
         '''
         self.url = 'http://e4ftl01.cr.usgs.gov/{0}/'
         self.is_date = re.compile(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}")
@@ -46,8 +58,16 @@ class MODIS_Scraper(object):
 
     def get_dates(self, product):
         '''
-        INPUT:
-            product -> string, name of MODIS product desired including the version
+        Gets all the dates for which the satellite product is available for. 
+
+        Parameters
+        -----------
+        product: str, name of MODIS product desired including the version.
+                 ex: 'MOLT/MOD13A2.006'
+
+        Returns
+        ----------
+        self.pages: list, a list of dates in which the satellite data is available. 
         '''
         self.product = product
         pages = self._get_links(self.url.format(self.product))
@@ -59,11 +79,14 @@ class MODIS_Scraper(object):
 
     def get_data(self, f_path, pages=None, format='hdf'):
         ''' 
-        INPUT:
-            tiled -> boolean, True if the data is tiled 
-            latlon -> list, bounding latitude and longitude coordinates 
-                      in the format of [lon_min    lon_max   lat_min   lat_max]
-            f_path -> string; path to save scraped data
+        Download, convert, and extract data from all the pages. 
+
+        Parameters
+        -----------
+        tiled: boolean, True if the data is tiled 
+        latlon: list, bounding latitude and longitude coordinates 
+                  in the format of [lon_min    lon_max   lat_min   lat_max]
+        f_path: str, path to save scraped data
         '''
         if pages == None:
             pages = self.pages
@@ -76,6 +99,13 @@ class MODIS_Scraper(object):
                 self._extract_area(nc_files)
 
     def _download(self, page, format, f_path):
+        ''' 
+        Parameters
+        -----------
+        page: str, a date for which data is to be downloaded
+        format: str, the file format to be downloaded (ex: 'hdf' or 'jpg')
+        f_path: str, path to save scraped data
+        '''
         links = self._get_links(self.url.format(self.product)+page)
         file_names = []
         for l in links:
@@ -87,7 +117,13 @@ class MODIS_Scraper(object):
         return file_names
 
     def _convert_hdf_to_nc(self, file_names):
-        
+        ''' 
+        Convert hdf files to netCDF files. 
+
+        Parameters
+        -----------
+        file_names: list, list of file paths (string) of the files to be converted.
+        '''
         nc_files = []
         for file_name in file_names:
             os.system('/opt/local/bin/gdal_translate -of netCDF "HDF4_EOS:EOS_GRID:{0}:MODIS_Grid_16Day_VI_CMG:CMG 0.05 Deg 16 days NDVI" {1}'.format(file_name, file_name.replace('hdf', 'nc')))
@@ -97,11 +133,23 @@ class MODIS_Scraper(object):
         return nc_files
 
     def _extract_area(self, nc_files):
+        ''' 
+        Use the CDO remapdis function to match the grid of the input files with the self.mask file. 
+
+        Parameters
+        -----------
+        nc_files: list, list of file paths (string) of the files to be remapped.
+        '''
         for nc_file in nc_files:
             subprocess.call(['cdo', 'remapdis,{0}'.format(self.mask), nc_file, nc_file.replace('.nc', '.mask.nc')])
             subprocess.call(['rm', nc_file])
 
     def _get_links(self, url):
+        ''' 
+        Parameters
+        -----------
+        url: str, a url 
+        '''
         r = requests.get(url)
         soup = BeautifulSoup(r.content, 'html.parser')
         links = soup.findAll('a', href=True)
@@ -109,6 +157,15 @@ class MODIS_Scraper(object):
         return [link['href'] for link in links]
 
     def _save_to_file(self, url, path):
+        '''
+        Saves the content of the url entirely to a file specified by path. 
+        Mainly meant to be used on image files. 
+
+        Parameters
+        -----------
+        url: str, website to be scraped.
+        path: str, path to the saved file. 
+        '''
         r = requests.get(url)
         with open(path, 'w') as f:
             f.write(r.content)
@@ -118,11 +175,14 @@ class MODIS_Scraper(object):
         Takes bounding latlon list and returns the corresponding tile number for MODLAND Tiles
         Reference: http://modis-land.gsfc.nasa.gov/MODLAND_grid.html
 
-        INPUT:
-            latlon -> list, bounding latitude and longitude coordinates 
-                      in the format of [lon_min    lon_max   lat_min   lat_max]
-        OUTPUT:
-            list; strings of MODLAND tile number formatted as 'h##v##'
+        Parameters
+        ------------
+        latlon: list, bounding latitude and longitude coordinates 
+                n the format of [lon_min    lon_max   lat_min   lat_max]
+        
+        Returns
+        --------
+        list: strings of MODLAND tile number formatted as 'h##v##'
         '''
         lon_min, lon_max, lat_min, lat_max = latlon
 
