@@ -63,3 +63,4 @@ target/
 
 *.pptx
 *.pdf
+notebooks/src
