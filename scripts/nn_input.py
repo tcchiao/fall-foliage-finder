@@ -1,17 +1,6 @@
 # import utility libraries
 from netCDF4 import Dataset
-import pandas as pd
 import numpy as np
-from collections import OrderedDict
-
-# import machine learning tools
-from sklearn.preprocessing import StandardScaler
-from keras.models import Sequential
-from keras.layers.convolutional import Convolution2D, ZeroPadding2D, MaxPooling2D
-from keras import backend as K
-
-# import utilities and classes I wrote
-from clustering import Location_Clusterer
 
 class NN_Input(object):
     """
@@ -22,7 +11,7 @@ class NN_Input(object):
     - add function to return the actual lat, lon, and time based on indices
     
     """
-    def __init__(self, predict=2, history=2, box=5, random_seed=None):
+    def __init__(self, predict=2, history=2, box=5, random_seed=None, fill_value=-999):
         """
         Initialize a class for storing neural network input data. 
         
@@ -44,6 +33,7 @@ class NN_Input(object):
         self.features = {}
         self.feature_types = {}
         self.variables = []
+        self.fill_value = fill_value
         
         self.predict = predict
         self.history = history
@@ -95,7 +85,7 @@ class NN_Input(object):
     def get_batch(self, j, k):
         pass
     
-    def get_features(self, i, j, k):
+    def get_features(self, i, j, k, ndim_out):
         """
         Given indices for latitude, longitude, and time point, returns the associated data from self.data. 
         
@@ -121,12 +111,15 @@ class NN_Input(object):
                 if np.sum(temp_data.mask) > len(temp_data.flatten())/2:
                     return None
                 elif np.any(temp_data.mask):
-                    temp_data = temp_data.filled(-999)
+                    temp_data = temp_data.filled(self.fill_value)
                     
                 if maps is None:
                     maps = temp_data
                 else:
-                    maps = np.ma.concatenate((maps, temp_data), axis=0)
+                    if ndim_out == 4:
+                        maps = np.ma.concatenate((maps, temp_data), axis=0)
+                    elif ndim_out == 5:
+                        maps = np.stack((maps, temp_data))
 #             else:
 #                 if lst is None:
 #                     lst = temp_data
@@ -135,7 +128,7 @@ class NN_Input(object):
 #         return [maps, lst]
         return maps
         
-    def select(self, n=None, t=None, cutoff=None, subset=None):
+    def select(self, n=None, t=None, cutoff=None, subset=None, ndim_out=4):
         """
         Selecting n data points randomly from the database before specified time cutoff. 
         
@@ -156,13 +149,16 @@ class NN_Input(object):
             elif self.feature_types[feat] == 'forecast_time_series':
                 mi += (self.predict+1)
                 
-        map_dimensions = (mi, (2*self.box)+1, (2*self.box)+1)
-
+        if ndim_out == 4:
+            map_dimensions = (mi, (2*self.box)+1, (2*self.box)+1)
+        elif ndim_out == 5:
+            map_dimensions = (len(self.variables), self.history+1, (2*self.box)+1, (2*self.box)+1)
+        
         if n is None and t is None:
             for i in xrange(cutoff):
                 for (k, j) in subset:
                     l = self.labels[i, j, k]
-                    features = self.get_features(i, j, k)
+                    features = self.get_features(i, j, k, ndim_out=ndim_out)
                     if features is not None and l != np.nan and features.shape==map_dimensions:
                         indices.append([i, j, k])
                         labels.append(l)
@@ -172,7 +168,7 @@ class NN_Input(object):
         elif t is not None:
             for (k, j) in subset:
                 l = self.labels[t, j, k]
-                features = self.get_features(t, j, k)
+                features = self.get_features(t, j, k, ndim_out=ndim_out)
                 if features is not None and l != np.nan and features.shape==map_dimensions:
                     indices.append([t, j, k])
                     labels.append(l)
@@ -191,7 +187,7 @@ class NN_Input(object):
                 else:
                     i = np.random.randint(cutoff)
                 l = self.labels[i, j, k]
-                features = self.get_features(i, j, k)
+                features = self.get_features(i, j, k, ndim_out=ndim_out)
                 if features is not None and l != np.nan and features.shape==map_dimensions:
                     indices.append([i, j, k])
                     labels.append(l)

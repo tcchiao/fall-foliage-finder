@@ -36,7 +36,7 @@ lc.transform_data()
 clusters = lc.fit_predict(lc.data2d)
 
 
-nn = NN_Input(predict=2, history=5, box=5, random_seed=42)
+nn = NN_Input(predict=2, history=3, box=5, random_seed=42)
 nn.load_labels(folder+'sign.label.nc', 'Band1')
 
 # f_paths = ['all.ndvi.nc','all.max.of.Wind.nc', 'all.min.of.Tmin.nc', 'all.mean.of.Tmin.nc', 'all.sum.of.Prec.nc',

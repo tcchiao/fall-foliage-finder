@@ -3,8 +3,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from netCDF4 import Dataset
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+
 
 class Location_Clusterer(KMeans):
     def __init__(self, n_clusters=8):
@@ -84,4 +83,3 @@ class Location_Clusterer(KMeans):
             
         scaler = StandardScaler()
         self.data2d = scaler.fit_transform(self.data2d)
-        
