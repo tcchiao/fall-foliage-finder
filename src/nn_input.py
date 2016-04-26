@@ -1,15 +1,18 @@
+"""
+A module for preparing 3D neural network inputs. 
+~~~~~~~~~~~~~~~~~~~~
+Author: Cindy Chiao
+Last Edit Date: 04/26/2016
+
+"""
 # import utility libraries
 from netCDF4 import Dataset
 import numpy as np
 
 class NN_Input(object):
     """
-    Stores the input data ready for feeding into a Keras neural network. 
-
-    To-Do:
-    - add function to take the clustering data in some ways
-    - add function to return the actual lat, lon, and time based on indices
-    
+    A class that reads in input data from netCDF input files, 
+    stores the input data and transform them for feeding into a Keras neural networks. 
     """
     def __init__(self, predict=2, history=2, box=5, random_seed=None, fill_value=-999):
         """
@@ -81,9 +84,6 @@ class NN_Input(object):
             self.features[name] = temp_data[self.history:, :, :]
         else:
             self.features[name] = temp_data
-        
-    def get_batch(self, j, k):
-        pass
     
     def get_features(self, i, j, k, ndim_out):
         """
@@ -96,16 +96,11 @@ class NN_Input(object):
         time: int, index for the time point desired. Must be within the range available in self.data. 
         """
         maps = None
-#         lst = None
         for ix, feat in enumerate(self.variables):
             if self.feature_types[feat] == 'history_time_series':
                 temp_data = self.features[feat][i:i+self.history+1, j-self.box:j+self.box+1, k-self.box:k+self.box+1]
             elif self.feature_types[feat] == 'forecast_time_series':
                 temp_data = self.features[feat][i:i+self.predict+1, j-self.box:j+self.box+1, k-self.box:k+self.box+1]
-#             elif self.feature_types[feat] == 'multi_layers':
-#                 temp_data = self.features[feat][:, j, k].flatten()
-#             else: 
-#                 temp_data = self.features[feat][j, k]
             
             if len(temp_data.shape) == 3:                
                 if np.sum(temp_data.mask) > len(temp_data.flatten())/2:
@@ -120,12 +115,6 @@ class NN_Input(object):
                         maps = np.ma.concatenate((maps, temp_data), axis=0)
                     elif ndim_out == 5:
                         maps = np.stack((maps, temp_data))
-#             else:
-#                 if lst is None:
-#                     lst = temp_data
-#                 else:
-#                     lst = np.append(lst, temp_data)
-#         return [maps, lst]
         return maps
         
     def select(self, n=None, t=None, cutoff=None, subset=None, ndim_out=4):
@@ -163,7 +152,6 @@ class NN_Input(object):
                         indices.append([i, j, k])
                         labels.append(l)
                         output_maps.append(features)
-#                         output_lst.append(features[1])
         
         elif t is not None:
             for (k, j) in subset:
@@ -173,7 +161,6 @@ class NN_Input(object):
                     indices.append([t, j, k])
                     labels.append(l)
                     output_maps.append(features)
-#                     output_lst.append(features[1])
         
         else:
             while len(labels) < n:
@@ -192,6 +179,5 @@ class NN_Input(object):
                     indices.append([i, j, k])
                     labels.append(l)
                     output_maps.append(features)
-#                     output_lst.append(features[1])
                     
         return np.array(indices), np.array(labels), np.array(output_maps)
