@@ -1,3 +1,10 @@
+"""
+A script that contains various utility functions for the fall foliage project. 
+~~~~~~~~~~~~~~~~~~
+Author: Cindy Chiao
+Date: 04/26/2016
+"""
+# Imports various libraries 
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
@@ -11,10 +18,15 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 from scipy import stats
 from keras.models import model_from_json
 
-
 def scale_data(data, mean, std):
     """
     Scales data by substracting mean and dividing by standard deviation. 
+    
+    Parameters
+    ----------
+    data: np array, containing data to be scaled. 
+    mean: float/int, mean. 
+    std: float/int, standard deviation. 
     """
     return (data-mean)/std
 
@@ -27,6 +39,11 @@ def load_models(n_clusters, modeldir, loss='mae', optimizer='adagrad'):
     data, with 1 model per cluster. Thus, the keys in the dictionary is the 
     cluster number. In addition to the models, a DataFrame of cluster list is 
     also returned containing the x, y index of each entry in the cluster. 
+    
+    Paramters
+    ---------
+    n_clusters: int, number of models to be loaded. 
+    modeldir: str, path to the directory where model structure and weights are stored.
     """
 
     models = {}
@@ -49,7 +66,12 @@ def load_models(n_clusters, modeldir, loss='mae', optimizer='adagrad'):
 
 def eval_regressor_model(model, cluster, X_train, y_train, 
                          X_test, y_test, outdir='/home/ubuntu/dataset/output/'):
-    
+    """
+    Given the model (assumed to be a trained neural network regressor), training, 
+    and testing data (X_ indicates input features and y_ indicates the target 
+    variable), evaluate model model performance by calculating the R-Squared and
+    plotting diagnosis plots. cluster 
+    """    
     train_predict = model.predict_proba(X_train, verbose=0)
     test_predict = model.predict_proba(X_test, verbose=0)
 
@@ -81,6 +103,12 @@ def eval_regressor_model(model, cluster, X_train, y_train,
     plt.savefig(outdir+'actual_predict_'+str(cluster)+'.png', bbox_inches='tight', dpi=300)
     
 def plot_list_in_2D(x, y, val):
+    """
+    Plotting values in a map using the x, y information.
+    x: list or numpy array, x axis of the values to be plotted.
+    y: list or numpy array, y axis of the values to be plotted. 
+    val: list or numpy array, values to be plotted. 
+    """
     plt.scatter(x, y, c=val, edgecolors='none', s=3)
     plt.xlim(x.min(), x.max())
     plt.ylim(y.min(), y.max())
@@ -88,7 +116,9 @@ def plot_list_in_2D(x, y, val):
 
 def plot_compare_map(lons, lats, y_true, y_predict, timestamp, s=None, 
                      cmap=None, outdir='/home/ubuntu/dataset/output/'):
-     
+    """
+    Plots the actual and predicted values side by side for comparison. 
+    """ 
     timestamp = str(int(timestamp))
     yr = timestamp[:4]
     mn = timestamp[4:6]
@@ -127,7 +157,9 @@ def plot_compare_map(lons, lats, y_true, y_predict, timestamp, s=None,
 
 def plot_diff_map(lons, lats, y_true=None, y_predict=None, y_diff=None, timestamp=None, 
                   s=None, cmap=None, outdir='/home/ubuntu/dataset/output/'):
-     
+    """
+    Plots the difference between the actual and predicted values on a map. 
+    """ 
     timestamp = str(int(timestamp))
     yr = timestamp[:4]
     mn = int(timestamp[4:6])

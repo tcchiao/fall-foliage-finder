@@ -1,3 +1,15 @@
+"""
+A neural network prediction and plotting script. 
+~~~~~~~~~~~~~~~~~~~~
+Author: Cindy Chiao
+Last Edit Date: 04/26/2016
+
+This script takes pre-trained neural network models (assumed to have multiple models,
+1 model per cluster), makes predictions of various time points, then calculates the 
+errors at each time point by comparing to the true labels. The errors are then 
+aggregated to seasonal level and plotted. Note: this script takes a relatively long
+time to run (on the order of several minutes per time point).
+"""
 # import utility libraries
 import numpy as np
 import pandas as pd
@@ -78,7 +90,6 @@ df_diff['season'] = [seasons[str(x)[4:6]] for x in df_diff.index]
 df_diff_season = df_diff.groupby('season').mean().T
 
 # Plot seasonal average bias 
-
 cmap=mpl.cm.get_cmap('seismic')
 norm = mpl.colors.Normalize(vmin=-1,vmax=1)
 title = 'Seasonal mean bias across continental U.S.'
@@ -91,7 +102,7 @@ fig = plt.figure(figsize=(18,11))
 plt.axis('off')
 for i, seas in enumerate(['Spring', 'Summer', 'Fall', 'Winter']):
     plt.subplot(2,2,i+1)
-    y_diff = np.mean(df_diff_season[seas].dropna().values, axis=1)
+    y_diff = df_diff_season[seas].dropna().values
     lons, lats = zip(*df_diff_season[seas].dropna().index.values)
     lons = np.array(lons)
     lats = np.array(lats)
@@ -100,7 +111,7 @@ for i, seas in enumerate(['Spring', 'Summer', 'Fall', 'Winter']):
             urcrnrlat=lats.max(), urcrnrlon=lons.max(), resolution='f',
             area_thresh=area_thresh)
     xi, yi = m(lons, lats)
-    m.scatter(xi, yi, c=y_diff, edgecolor='none', cmap=cmap, s=s, norm=norm)
+    m.scatter(xi, yi, c=y_diff, edgecolor='none', cmap=cmap, s=1, norm=norm)
     m.drawlsmask(land_color=land_color, ocean_color=ocean_color, lakes=True)
     ax = plt.gca()
     ax.text(0.05, 0.05, seas, weight='semibold', horizontalalignment='left',
