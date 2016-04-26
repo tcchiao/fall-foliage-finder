@@ -1,16 +1,37 @@
+"""
+This script is used to download gridded metereological (weather) data from UW ftp website. 
+~~~~~~~~~~~~~~~~~~~~
+Author: Cindy Chiao
+Last Edit Date: 04/09/2016
+
+Reference: http://www.hydro.washington.edu/SurfaceWaterGroup/Data/livneh/livneh.et.al.2013.page.html
+Citation: Livneh, B., E. A. Rosenberg, C. Lin, B. Nijssen, V. Mishra, K. M. Andreadis, E. P. Maurer, and 
+          D. P. Lettenmaier, 2013: A Long-Term Hydrologically Based Dataset of Land Surface Fluxes and 
+          States for the Conterminous United States: Update and Extensions. J . Climate, 26.
+Download site: ftp://ftp.hydro.washington.edu/pub/blivneh/CONUS/Meteorology.nc.v.1.2.1915.2011.bz2/VERSION_ID
+Version: Version 1.2
+Date: March, 2014
+Contact: ben.livneh@colorado.edu
+"""
 import numpy as np
 import subprocess
 
+# Set local variables 
+f_path = '../data/weather/' # path to save downloaded file
+mask = '../data/mask.nc'# mask to use for remapping
+
+# Website path variables
 base_url = 'ftp://ftp.hydro.washington.edu/pub/blivneh/CONUS/Meteorology.nc.v.1.2.1915.2011.bz2/'
 base_fname = 'Meteorology_Livneh_CONUSExt_v.1.2_2013.{t}.nc.bz2'
 
-f_path = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/weather/'
-mask = '/Users/Chiao/google-drive/projects/Galvanize/fall-foliage-finder/data/final/mask.nc'
-
+# Data is available by month at the time of writing
+# Specify the years and months to download
 yrs = np.arange(2004, 2012)
 months = np.arange(1, 13)
+# Specify the variables to unpack
 variables = ['Prec', 'Tmax', 'Tmin', 'Wind']
 
+# Downloading and processing files
 for yr in yrs:
     for month in months:
         time = '{yr}{month:02d}'.format(yr=yr, month=month)
@@ -45,7 +66,8 @@ for yr in yrs:
                         fname.format(mod='.short', ext='.nc')])
         for var in variables:
             subprocess.call(['rm', fname.format(mod='.short.'+str(var), ext='.nc')])
-
+    
+    # Merging files download by time, produces 1 file per variable
     print 'Merging year', yr
     for var in variables:
         file_list = [f_path+'{yr}{month:02d}.{var}.nc'.format(yr=yr, month=month, var=var) for month in months]

@@ -9,14 +9,43 @@ from netCDF4 import Dataset
 from mpl_toolkits.basemap import Basemap, cm
 from sklearn.metrics import accuracy_score, roc_auc_score
 from scipy import stats
+from keras.models import model_from_json
 
-def reformat_y(y):
-    y[y == -1] = 0
-    y = np.hstack((y.reshape(-1,1), 1-y.reshape(-1,1)))
-    return y
 
 def scale_data(data, mean, std):
+    """
+    Scales data by substracting mean and dividing by standard deviation. 
+    """
     return (data-mean)/std
+
+def load_models(n_clusters, modeldir, loss='mae', optimizer='adagrad'):
+    """
+    Loads Keras neural network models from file. Model structure is stored in 
+    json format and model weights are stored in h5 (hdf5) files. The models 
+    are compiled with the provided loss and optimizer, then put into a 
+    dictionary to be used. This function was designed to be used with clustered 
+    data, with 1 model per cluster. Thus, the keys in the dictionary is the 
+    cluster number. In addition to the models, a DataFrame of cluster list is 
+    also returned containing the x, y index of each entry in the cluster. 
+    """
+
+    models = {}
+    df_cluster = None
+
+    for cluster in xrange(n_clusters):
+        json_file = modeldir+'model_architecture_'+str(cluster)+'.json'
+        weights_file = modeldir+'model_weights_'+str(cluster)+'.h5'
+
+        models[cluster] = model_from_json(open(json_file).read())
+        models[cluster].load_weights(weights_file)
+        models[cluster].compile(loss=loss, optimizer=optimizer)
+
+        df_subset = pd.read_table(modeldir+'cluster_list_'+str(cluster)+'.txt',
+                                 delimiter=' ', names = ['xs', 'ys'])
+        df_subset['cluster_num'] = np.ones(len(df_subset), dtype=int)*cluster
+        df_cluster = pd.concat((df_cluster, df_subset))
+    
+    return models, df_cluster
 
 def eval_regressor_model(model, cluster, X_train, y_train, 
                          X_test, y_test, outdir='/home/ubuntu/dataset/output/'):
@@ -50,39 +79,6 @@ def eval_regressor_model(model, cluster, X_train, y_train,
     plt.ylabel('Predicted')
     plt.legend()
     plt.savefig(outdir+'actual_predict_'+str(cluster)+'.png', bbox_inches='tight', dpi=300)
-
-def eval_classifier_model(y_train, train_predict, y_test, test_predict, threshold=0.5):
-    bm = np.sum(y_train[:,1])/float(len(y_train))
-    acc = accuracy_score(y_train[:,0], (train_predict[:,0]>threshold))
-    try:
-        auc = roc_auc_score(y_train[:,0], train_predict[:,0])
-    except ValueError:
-        auc = 'N/A'
-        
-    print 'Training set:'
-    print 'Bench mark:', bm
-    print 'Accuracy:', acc
-    print 'ROC AUC:', auc
-    
-    bm = np.sum(y_test[:,1])/float(len(y_test))
-    acc = accuracy_score(y_test[:,0], (test_predict[:,0]>threshold))
-    try:
-        auc = roc_auc_score(y_test[:,0], test_predict[:,0])
-    except ValueError:
-        auc = 'N/A'
-        
-    print 'Testing set:'
-    print 'Bench mark:', bm
-    print 'Accuracy:', acc
-    print 'ROC AUC:', auc
-
-def plot_time_series(i, j, time_series):
-    fig = plt.figure(figsize=(20,6))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.plot(np.arange(len(time_series)), time_series)
-    note = 'lat = {0}, lon = {1}'.format(lats[i], lons[j])
-    ax.text(0.9, 2, note, fontsize=20)
-    plt.show()
     
 def plot_list_in_2D(x, y, val):
     plt.scatter(x, y, c=val, edgecolors='none', s=3)
@@ -149,7 +145,7 @@ def plot_diff_map(lons, lats, y_true=None, y_predict=None, y_diff=None, timestam
     ocean_color='lightblue'
 
     fig = plt.figure(figsize=(9,7))
-    plt.title(title, fontsize=18, fontweight='bold', loc='right')
+    plt.title(title, fontsize=18, fontweight='bold', loc='center')
     plt.axis('off')
     m = Basemap(projection='merc', llcrnrlat=lats.min(), llcrnrlon=lons.min(),
             urcrnrlat=lats.max(), urcrnrlon=lons.max(), resolution='f',
