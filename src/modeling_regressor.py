@@ -1,3 +1,15 @@
+"""
+A neural network training script using pre-defined network architecture. 
+~~~~~~~~~~~~~~~~~~~
+Author: Cindy Chiao
+Last Edit Date: 04/26/2016
+
+This script takes in data from netCDF files, performs K Means clustering 
+on locations within the mask based on specified variables, then trains
+1 neural network for each cluster to predict the target variable two time
+points in the future. Note: this script takes approximately 4 hours to run
+using GPU.
+"""
 # import utility libraries
 from netCDF4 import Dataset
 import numpy as np
@@ -29,7 +41,7 @@ lc.transform_data()
 clusters = lc.fit_predict(lc.data2d)
 
 # Loading weather data for training neural network 
-folder = '/home/ubuntu/dataset/int_weather/'
+folder = '/home/ubuntu/dataset/weather/'
 nn = NN_Input(predict=2, history=2, box=5, random_seed=42)
 nn.load_labels(folder+'all.ndvi.normed.nc', 'Band1')
 
