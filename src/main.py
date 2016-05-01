@@ -23,9 +23,9 @@ from netCDF4 import Dataset
 from keras.models import model_from_json
 
 # import functions and classese for use
-from util import load_models
-from nn_input import NN_Input
-from regressor_plot import Regressor_Plotter
+from src.util import load_models
+from src.nn_input import NN_Input
+from src.regressor_plot import Regressor_Plotter
 
 ## Setting variables 
 
@@ -42,8 +42,8 @@ n_var = 4
 # Spatial resolution of maps and data
 res = 0.0625/2
 # Time point start and finish 
-time_start = 350
-time_end = 400
+time_start = 300
+time_end = 301 # 400
 
 
 # Loading saved models
@@ -80,8 +80,9 @@ for timepoint in xrange(time_start, time_end):
     plotter.plot(timepoint, timeseries=True, plot=False)
     
 # Aggregate time series data saved in a Regressor_Plotter instance by season
+
 seasons = {'03':'Spring', '04':'Spring', '05':'Spring',
-           '06':'Summer', '07':'Sumeer', '08':'Summer',
+           '06':'Summer', '07':'Summer', '08':'Summer',
            '09':'Fall', '10':'Fall', '11':'Fall',
            '12':'Winter', '01':'Winter', '02':'Winter'}
 
@@ -117,5 +118,5 @@ for i, seas in enumerate(['Spring', 'Summer', 'Fall', 'Winter']):
     ax.text(0.05, 0.05, seas, weight='semibold', horizontalalignment='left',
             verticalalignment='bottom', transform=ax.transAxes, fontsize=24)
 plt.tight_layout()
-img_path = outdir+'avg_anomaly_per_season.png'
+img_path = outdir+'avg_anomaly_per_season_long.png'
 plt.savefig(img_path, bbox_inches='tight', dpi=300)
